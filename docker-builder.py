@@ -12,11 +12,35 @@ parser.add_argument('--file',help='Path to docker file',required=True)
 parser.add_argument('--config',help='Path to configuration file',required=True)
 
 
+def checkValidConfig(config):
+    if 'name' not in config:
+        raise AttributeError
+    elif 'tag' not in config:
+        raise AttributeError
+
 def readConfig(configFile):
     '''
         Reads the configuration file to build image.
     '''
-    return None
+    try:
+        with open(configFile) as f:
+            config = f.read()
+            config = json.loads(config)
+        try:
+            checkValidConfig(config)
+        except AttributeError:
+            print("Invalid configuration.\nPlease check documentation.")
+            sys.exit(1)
+        imageName = config['name']
+        tag = config['tag']
+        if 'deploy' in config:
+            deploy = config['deploy']
+        else:
+            deploy = False
+        return imageName,tag,deploy
+    except Exception as e:
+        print("Error")
+        sys.exit(1)
 
 
 def checkFileExists(file):
@@ -35,16 +59,17 @@ def main():
     '''
     arguments = parser.parse_args()
     try:
-        CONFIG_FILE = checkFileExists(arguments.file)
+        DOCKERFILE = checkFileExists(arguments.file)
     except FileNotFoundError:
         print(f'Dockerfile not found at {arguments.file}')
         sys.exit(1)
     try:
-        DOCKERFILE =  checkFileExists(arguments.config)
+        CONFIG_FILE =  checkFileExists(arguments.config)
     except FileNotFoundError:
-        print(f'Dockerfile not found at {arguments.config}')
+        print(f'Configuration not found at {arguments.config}')
         sys.exit(1)
-
+    imageName,tag,deploy = readConfig(CONFIG_FILE)
+    print(imageName,tag,deploy)
 
 if __name__ == "__main__":
     main()
