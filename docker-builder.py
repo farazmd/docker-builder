@@ -8,9 +8,11 @@ CONFIG_FILE = None
 DOCKERFILE = None
 CLIENT = None
 
-parser = argparse.ArgumentParser(prog='docker-builder',description='Helps to build and push docker images')
-parser.add_argument('--file',help='Path to docker file',required=True)
-parser.add_argument('--config',help='Path to configuration file',required=True)
+def createParser():
+    parser = argparse.ArgumentParser(prog='docker-builder',description='Helps to build and push docker images')
+    parser.add_argument('--file',help='Path to docker file',required=True)
+    parser.add_argument('--config',help='Path to configuration file',required=True)
+    return parser
 
 
 def createDockerClient():
@@ -19,7 +21,7 @@ def createDockerClient():
     '''
     try:
         return docker.from_env()
-    except Exception as e:
+    except Exception:
         raise RuntimeError
 
 def checkValidConfig(config):
@@ -100,7 +102,7 @@ def writeLogstoFile(logs,createdImage):
                 if 'stream' in line:
                     f.write(line['stream'])
         print(f"Successfully wrote build logs to {logs_dir}{os.path.sep}{createdImage}-logs")
-    except Exception as e:
+    except Exception:
         print("Failed to write logs to file")
 
 
@@ -131,7 +133,8 @@ def main():
         Program starts here.
     '''
     global CLIENT,DOCKERFILE,CONFIG_FILE
-    arguments = parser.parse_args()
+    parser = createParser()
+    arguments = parser.parse_args(sys.argv[1:])
     try:
         CLIENT = createDockerClient()
     except RuntimeError:
