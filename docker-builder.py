@@ -52,7 +52,11 @@ def readConfig(configFile):
             deploy = config['deploy']
         else:
             deploy = None
-        return imageName,tag,deploy
+        if 'build_args' in config and len(config['build_args'])!=0:
+            buildArgs = config['build_args']
+        else:
+            buildArgs = None
+        return imageName,tag,deploy,buildArgs
     except Exception as e:
         print("Error")
         sys.exit(1)
@@ -127,6 +131,28 @@ def buildImage(imageName,tagName):
         print(f"Failed to not open dockerfile: {DOCKERFILE}")
         sys.exit(1)
 
+def buildImage(imageName,tagName,buildArgs):
+    '''
+        Helps to build the image.
+    '''
+    try:
+        with open(DOCKERFILE,'rb') as f:
+            try:
+                result = CLIENT.images.build(
+                    fileobj = f,
+                    tag = f'{imageName}:{tagName}',
+                    buildargs = buildArgs,
+                    forcerm=True
+                )
+                writeLogstoFile(result[1],f'{imageName}-{tagName}')
+                print(f"Successfully built image with ID: {result[0].id} and tags: {result[0].attrs['RepoTags']}") 
+            except Exception as e:
+                print('Failed to build image.')
+                sys.exit(1)
+    except Exception as e:
+        print(f"Failed to not open dockerfile: {DOCKERFILE}")
+        sys.exit(1)
+
 
 def main():
     '''
@@ -150,8 +176,11 @@ def main():
     except FileNotFoundError:
         print(f'Configuration not found at {arguments.config}')
         sys.exit(1)
-    imageName,tag,deploy = readConfig(CONFIG_FILE)
-    buildImage(imageName,tag)
+    imageName,tag,deploy,buildArgs = readConfig(CONFIG_FILE)
+    if(buildArgs==None):
+        buildImage(imageName,tag)
+    else:
+        buildImage(imageName,tag,buildArgs)
     
 
 if __name__ == "__main__":
