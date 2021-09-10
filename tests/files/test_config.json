@@ -1,0 +1,7 @@
+{
+    "name": "test",
+    "tags": "1.0.0",
+    "build_args": {
+    },
+    "deploy": ["docker-hub"]
+}

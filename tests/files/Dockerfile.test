@@ -1,0 +1,3 @@
+FROM nginx as base
+
+RUN apt-get update && apt-get upgrade
