@@ -39,8 +39,13 @@ def checkValidConfig(config):
         raise AttributeError
     if 'deploy' in config:
         if not isinstance(config['deploy'],list):
-            print("'deploy' key musg be a list")
+            print("'deploy' key must be a list")
             raise AttributeError
+    if 'build_args' in config:
+        if not isinstance(config['build_args'],dict):
+            print("'build_args' key must be a dict object")
+            raise AttributeError
+
     
 
 def readConfig(configFile):
