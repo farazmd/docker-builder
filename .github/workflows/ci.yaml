@@ -1,4 +1,4 @@
-name: docker-builder lint
+name: docker-builder tests
 
 on: [push]
 

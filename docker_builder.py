@@ -28,10 +28,20 @@ def checkValidConfig(config):
     '''
         Checks if the config file is valid.
     '''
-    if 'name' not in config:
+    if 'imageName' not in config:
+        print("'imageName' is a required key in configuration")
         raise AttributeError
-    elif 'tag' not in config:
+    if 'repoName' not in config:
+        print("'repoName' is a required key in configuration")
         raise AttributeError
+    if 'tag' not in config:
+        print("'tag' is a required key in configuration")
+        raise AttributeError
+    if 'deploy' in config:
+        if not isinstance(config['deploy'],list):
+            print("'deploy' key musg be a list")
+            raise AttributeError
+    
 
 def readConfig(configFile):
     '''
@@ -46,7 +56,8 @@ def readConfig(configFile):
         except AttributeError:
             print("Invalid configuration.\nPlease check documentation.")
             sys.exit(1)
-        imageName = config['name']
+        imageName = config['imageName']
+        repoName = config['repoName']
         tag = config['tag']
         if 'deploy' in config:
             deploy = config['deploy']
@@ -56,7 +67,7 @@ def readConfig(configFile):
             buildArgs = config['build_args']
         else:
             buildArgs = None
-        return imageName,tag,deploy,buildArgs
+        return repoName,imageName,tag,deploy,buildArgs
     except Exception as e:
         print("Error")
         sys.exit(1)
@@ -81,6 +92,7 @@ def dockerHubLogin():
             CLIENT.login(username=os.environ['HUB_USERNAME'],password=os.environ['HUB_PASS'])
         except Exception as e:
             print(e.__cause__)
+            sys.exit(1)
     else:
         raise AttributeError
 
@@ -110,7 +122,7 @@ def writeLogstoFile(logs,createdImage):
         print("Failed to write logs to file")
 
 
-def buildImage(imageName,tagName):
+def buildImage(repoName,imageName,tagName):
     '''
         Helps to build the image.
     '''
@@ -119,10 +131,10 @@ def buildImage(imageName,tagName):
             try:
                 result = CLIENT.images.build(
                     fileobj = f,
-                    tag = f'{imageName}:{tagName}',
+                    tag = f'{repoName}/{imageName}:{tagName}',
                     forcerm=True
                 )
-                writeLogstoFile(result[1],f'{imageName}-{tagName}')
+                writeLogstoFile(result[1],f'{repoName}-{imageName}-{tagName}')
                 print(f"Successfully built image with ID: {result[0].id} and tags: {result[0].attrs['RepoTags']}") 
             except Exception as e:
                 print('Failed to build image.')
@@ -131,29 +143,52 @@ def buildImage(imageName,tagName):
         print(f"Failed to not open dockerfile: {DOCKERFILE}")
         sys.exit(1)
 
-def buildImage(imageName,tagName,buildArgs):
+def buildImageWithArgs(repoName,imageName,tagName,buildArgs):
     '''
-        Helps to build the image.
+        Helps to build the image with arguments.
     '''
     try:
         with open(DOCKERFILE,'rb') as f:
             try:
                 result = CLIENT.images.build(
                     fileobj = f,
-                    tag = f'{imageName}:{tagName}',
+                    tag = f'{repoName}/{imageName}:{tagName}',
                     buildargs = buildArgs,
                     forcerm=True
                 )
-                writeLogstoFile(result[1],f'{imageName}-{tagName}')
+                writeLogstoFile(result[1],f'{repoName}-{imageName}-{tagName}')
                 print(f"Successfully built image with ID: {result[0].id} and tags: {result[0].attrs['RepoTags']}") 
             except Exception as e:
                 print('Failed to build image.')
                 sys.exit(1)
     except Exception as e:
-        print(f"Failed to not open dockerfile: {DOCKERFILE}")
+        print(f"Failed to open dockerfile: {DOCKERFILE}")
         sys.exit(1)
 
+def deployToDockerHub(repoName,imageName,tagName):
+    '''Function to deploy image to docker hub'''
+    try:
+        dockerHubLogin()
+    except AttributeError:
+        print("'HUB_USERNAME' or 'HUB_PASSWORD' not set")
+        sys.exit()
+    try:
+        CLIENT.images.push(f"{os.environ['HUB_USERNAME']}/{repoName}/{imageName}",tag=tagName)
+    except Exception as e:
+        print(e.__cause__)
 
+def deployImage(deploys,repoName,imageName,tagName):
+    '''Helps to deploy code to specified repository'''
+    if deploys != None:
+        if len(deploys) !=0:
+            for deploy in deploys:
+                if deploy == 'docker-hub':
+                    deployToDockerHub(repoName,imageName,tagName)
+        else:
+            print("deploy key contains empty list.")
+    else:
+        print("deploy key not set")
+    
 def main():
     '''
         Program starts here.
@@ -176,11 +211,13 @@ def main():
     except FileNotFoundError:
         print(f'Configuration not found at {arguments.config}')
         sys.exit(1)
-    imageName,tag,deploy,buildArgs = readConfig(CONFIG_FILE)
+    repoName,imageName,tag,deploy,buildArgs = readConfig(CONFIG_FILE)
     if(buildArgs==None):
-        buildImage(imageName,tag)
+        buildImage(repoName,imageName,tag)
     else:
-        buildImage(imageName,tag,buildArgs)
+        buildImage(repoName,imageName,tag,buildArgs)
+    
+    deployImage(deploy,)
     
 
 if __name__ == "__main__":

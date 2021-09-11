@@ -1,5 +1,6 @@
 {
-    "name": "test",
+    "imageName": "test",
+    "repoName": "test",
     "tags": "1.0.0",
     "build_args": {
     },
